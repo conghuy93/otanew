@@ -4,7 +4,6 @@
 #include <esp_lcd_panel_ops.h>
 #include <esp_lcd_panel_vendor.h>
 #include <esp_log.h>
-#include <esp_random.h>
 #include <wifi_station.h>
 
 #include "application.h"
@@ -39,14 +38,11 @@ private:
     LcdDisplay* display_;
     PowerManager* power_manager_;
     Button boot_button_;
-    // TTP223 is active HIGH on touch; enable power-save mode
-    Button touch_button_{TOUCH_TTP223_GPIO, true, 0, 0, true};
-    bool touch_sensor_enabled_ = true;  // Touch sensor can be disabled via web UI
     void InitializePowerManager() {
         power_manager_ =
             new PowerManager(POWER_CHARGE_DETECT_PIN, POWER_ADC_UNIT, POWER_ADC_CHANNEL);
     }
-    
+
     void InitializeSpi() {
         spi_bus_config_t buscfg = {};
         buscfg.mosi_io_num = DISPLAY_MOSI_PIN;
@@ -90,13 +86,6 @@ private:
         display_ = new OttoEmojiDisplay(
             panel_io, panel, DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y,
             DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY);
-        
-        // Start with Otto GIF mode, show happy emoji by default
-        if (display_) {
-            static_cast<OttoEmojiDisplay*>(display_)->SetEmojiMode(true);
-            display_->SetEmotion("happy");  // Welcoming expression
-            ESP_LOGI(TAG, "🤖 Otto GIF mode enabled with happy emoji");
-        }
     }
 
     void InitializeButtons() {
@@ -107,88 +96,6 @@ private:
                 ResetWifiConfiguration();
             }
             app.ToggleChatState();
-        });
-
-        // TTP223 touch -> random action and emotion (if enabled)
-        touch_button_.OnClick([this]() {
-            if (!touch_sensor_enabled_) {
-                ESP_LOGI(TAG, "🖐️ TTP223 touch detected but sensor is disabled");
-                return;
-            }
-            
-            // Random number generator
-            uint32_t random_val = esp_random();
-            
-            // Array of emotions to choose from
-            const char* emotions[] = {
-                "happy",      // 0
-                "laughing",   // 1
-                "winking",    // 2
-                "cool",       // 3
-                "love",       // 4
-                "surprised",  // 5
-                "excited"     // 6 (if exists)
-            };
-            const int num_emotions = sizeof(emotions) / sizeof(emotions[0]);
-            
-            // Greet sequence function ID (will handle via queue)
-            const int ACTION_GREET_SEQUENCE = 100;
-            const int ACTION_CELEBRATE_SEQUENCE = 101;
-            
-            // Array of actions to choose from (6 specific actions with fixed emoji)
-            
-            struct ActionWithEmoji {
-                int action_type;
-                int param1;
-                int param2;
-                const char* name;
-                bool is_sequence;
-                const char* emoji;  // Fixed emoji for this action
-            };
-            
-            const ActionWithEmoji actions[] = {
-                {ACTION_GREET_SEQUENCE, 0, 0, "Greet (Chào Hỏi)", true, "happy"},          // 0: home → wave → bow
-                {ACTION_CELEBRATE_SEQUENCE, 0, 0, "Celebrate (Ăn Mừng)", true, "happy"},   // 1: dance → wave → swing
-                {ACTION_DOG_DANCE, 2, 200, "Dance (Nhảy Múa)", false, "happy"},            // 2
-                {ACTION_DOG_SIT_DOWN, 1, 3000, "Sit (Ngồi)", false, "sleepy"},             // 3
-                {ACTION_DOG_LIE_DOWN, 1, 1500, "Lie (Nằm)", false, "sleepy"},              // 4
-                {ACTION_DOG_SCRATCH, 5, 50, "Scratch (Gãi Ngứa)", false, "neutral"}        // 5
-            };
-            const int num_actions = sizeof(actions) / sizeof(actions[0]);
-            
-            // Pick random action only (emoji is fixed per action)
-            int action_idx = random_val % num_actions;
-            
-            const ActionWithEmoji& chosen_action = actions[action_idx];
-            
-            ESP_LOGI(TAG, "🖐️ TTP223 touch -> Random action: %s (emoji: %s)", 
-                     chosen_action.name, chosen_action.emoji);
-            
-            // Show fixed emoji for this action
-            auto display = GetDisplay();
-            if (display) display->SetEmotion(chosen_action.emoji);
-            
-            // Queue random action (handle sequences specially)
-            if (chosen_action.is_sequence) {
-                if (chosen_action.action_type == 100) {
-                    // Greet sequence: home → wave → bow
-                    ESP_LOGI(TAG, "👋 Executing Greet sequence");
-                    otto_controller_queue_action(ACTION_HOME, 1, 500, 0, 0);
-                    otto_controller_queue_action(ACTION_DOG_WAVE_RIGHT_FOOT, 3, 150, 0, 0);
-                    otto_controller_queue_action(ACTION_DOG_BOW, 2, 150, 0, 0);
-                } else if (chosen_action.action_type == 101) {
-                    // Celebrate sequence: dance → wave → swing
-                    ESP_LOGI(TAG, "🎉 Executing Celebrate sequence");
-                    otto_controller_queue_action(ACTION_DOG_DANCE, 2, 200, 0, 0);
-                    otto_controller_queue_action(ACTION_DOG_WAVE_RIGHT_FOOT, 5, 100, 0, 0);
-                    otto_controller_queue_action(ACTION_DOG_SWING, 3, 10, 0, 0);  // Changed from 150 to 10 for faster swing
-                }
-            } else {
-                // Simple single action
-                otto_controller_queue_action(chosen_action.action_type, 
-                                            chosen_action.param1, 
-                                            chosen_action.param2, 0, 0);
-            }
         });
     }
 
@@ -264,41 +171,6 @@ public:
         level = power_manager_->GetBatteryLevel();
         return true;
     }
-
-    virtual MusicPlayer* GetMusicPlayer() override { 
-        return nullptr; // Otto robot không có music player
-    }
-
-public:
-    // Method to control touch sensor state
-    void SetTouchSensorEnabled(bool enabled) {
-        touch_sensor_enabled_ = enabled;
-        ESP_LOGI(TAG, "🖐️ Touch sensor %s", enabled ? "ENABLED" : "DISABLED");
-    }
-    
-    bool IsTouchSensorEnabled() const {
-        return touch_sensor_enabled_;
-    }
 };
 
 DECLARE_BOARD(OttoRobot);
-
-// C interface for touch sensor control
-extern "C" {
-    void otto_set_touch_sensor_enabled(bool enabled) {
-        auto& board = Board::GetInstance();
-        auto otto_board = dynamic_cast<OttoRobot*>(&board);
-        if (otto_board) {
-            otto_board->SetTouchSensorEnabled(enabled);
-        }
-    }
-    
-    bool otto_is_touch_sensor_enabled() {
-        auto& board = Board::GetInstance();
-        auto otto_board = dynamic_cast<OttoRobot*>(&board);
-        if (otto_board) {
-            return otto_board->IsTouchSensorEnabled();
-        }
-        return false;
-    }
-}

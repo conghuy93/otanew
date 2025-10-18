@@ -920,21 +920,28 @@ void LcdDisplay::SetEmotion(const char* emotion) {
         gif_controller_->Stop();
         gif_controller_.reset();
     }
-    
-    if (emoji_image_ == nullptr) {
-        return;
-    }
 
     auto emoji_collection = static_cast<LvglTheme*>(current_theme_)->emoji_collection();
     auto image = emoji_collection != nullptr ? emoji_collection->GetEmojiImage(emotion) : nullptr;
+    
+    // If no image found, try text emoji fallback
     if (image == nullptr) {
         const char* utf8 = font_awesome_get_utf8(emotion);
         if (utf8 != nullptr && emoji_label_ != nullptr) {
             DisplayLockGuard lock(this);
             lv_label_set_text(emoji_label_, utf8);
-            lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+            if (emoji_image_ != nullptr) {
+                lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+            }
             lv_obj_remove_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
+            ESP_LOGI(TAG, "📝 Using text emoji for: %s -> %s", emotion, utf8);
         }
+        return;
+    }
+    
+    // If emoji_image_ is null but we have an image, we can't display it
+    if (emoji_image_ == nullptr) {
+        ESP_LOGW(TAG, "emoji_image_ is null, cannot display image emoji");
         return;
     }
 
@@ -946,24 +953,36 @@ void LcdDisplay::SetEmotion(const char* emotion) {
         if (gif_controller_->IsLoaded()) {
             // Set up frame update callback
             gif_controller_->SetFrameCallback([this]() {
-                lv_image_set_src(emoji_image_, gif_controller_->image_dsc());
+                if (emoji_image_ != nullptr) {
+                    lv_image_set_src(emoji_image_, gif_controller_->image_dsc());
+                }
             });
             
             // Set initial frame and start animation
-            lv_image_set_src(emoji_image_, gif_controller_->image_dsc());
+            if (emoji_image_ != nullptr) {
+                lv_image_set_src(emoji_image_, gif_controller_->image_dsc());
+            }
             gif_controller_->Start();
             
             // Show GIF, hide others
-            lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_remove_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+            if (emoji_label_ != nullptr) {
+                lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
+            }
+            if (emoji_image_ != nullptr) {
+                lv_obj_remove_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+            }
         } else {
             ESP_LOGE(TAG, "Failed to load GIF for emotion: %s", emotion);
             gif_controller_.reset();
         }
     } else {
-        lv_image_set_src(emoji_image_, image->image_dsc());
-        lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_remove_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+        if (emoji_image_ != nullptr) {
+            lv_image_set_src(emoji_image_, image->image_dsc());
+            if (emoji_label_ != nullptr) {
+                lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
+            }
+            lv_obj_remove_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+        }
     }
 
 #if CONFIG_USE_WECHAT_MESSAGE_STYLE
@@ -976,7 +995,9 @@ void LcdDisplay::SetEmotion(const char* emotion) {
             gif_controller_.reset();
         }
         
-        lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+        if (emoji_image_ != nullptr) {
+            lv_obj_add_flag(emoji_image_, LV_OBJ_FLAG_HIDDEN);
+        }
         lv_obj_add_flag(emoji_label_, LV_OBJ_FLAG_HIDDEN);
     }
 #endif

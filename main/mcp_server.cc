@@ -393,8 +393,9 @@ void McpServer::ParseMessage(const cJSON* json) {
                 ParseCapabilities(capabilities);
             }
         }
-        auto app_desc = esp_app_get_description();
-        std::string message = "{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{}},\"serverInfo\":{\"name\":\"" BOARD_NAME "\",\"version\":\"";
+    auto app_desc = esp_app_get_description();
+    // Report branded server name for clients
+    std::string message = "{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{\"tools\":{}},\"serverInfo\":{\"name\":\"miniZjp\",\"version\":\"";
         message += app_desc->version;
         message += "\"}}";
         ReplyResult(id_int, message);

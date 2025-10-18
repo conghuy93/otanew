@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tin tức Việt Nam - Kiki Dog Robot News</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #222; 
+    min-height: 100vh;
+    padding: 20px;
+  }
+  
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  }
+  
+  h1 { 
+    text-align: center; 
+    color: #667eea; 
+    margin-bottom: 10px;
+    font-size: 2.5em;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .subtitle {
+    text-align: center;
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 1.1em;
+  }
+  
+  .filter { 
+    text-align: center; 
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  
+  button {
+    padding: 15px 25px; 
+    border: none; 
+    border-radius: 12px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white; 
+    cursor: pointer; 
+    transition: all 0.3s ease;
+    font-size: 1em;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  button:hover { 
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+  }
+  
+  button:active {
+    transform: translateY(0);
+  }
+  
+  button.active {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  }
+  
+  .loading {
+    text-align: center;
+    padding: 40px;
+    color: #667eea;
+    font-size: 1.2em;
+  }
+  
+  .spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .news { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+    gap: 25px;
+    margin-top: 20px;
+  }
+  
+  .card { 
+    background: white; 
+    border-radius: 16px; 
+    padding: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+  
+  .card-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    background: #f0f0f0;
+  }
+  
+  .card-content {
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .card h3 { 
+    margin: 0 0 10px; 
+    font-size: 1.2em;
+    color: #333;
+    line-height: 1.4;
+  }
+  
+  .card .source {
+    color: #667eea;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: inline-block;
+  }
+  
+  .card p { 
+    font-size: 0.95em; 
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 15px;
+    flex: 1;
+  }
+  
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+  }
+  
+  .card a { 
+    color: #667eea; 
+    text-decoration: none; 
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.3s;
+  }
+  
+  .card a:hover {
+    color: #764ba2;
+  }
+  
+  .date {
+    color: #999;
+    font-size: 0.85em;
+  }
+  
+  .error {
+    background: #fee;
+    border: 2px solid #fcc;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    color: #c33;
+  }
+  
+  .attribution {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #eee;
+    color: #999;
+    font-size: 0.9em;
+  }
+  
+  .attribution a {
+    color: #667eea;
+    text-decoration: none;
+  }
+  
+  @media (max-width: 768px) {
+    .container {
+      padding: 20px;
+    }
+    
+    h1 {
+      font-size: 1.8em;
+    }
+    
+    .news {
+      grid-template-columns: 1fr;
+    }
+    
+    button {
+      padding: 12px 20px;
+      font-size: 0.9em;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>📰 Tin tức Việt Nam</h1>
+    <div class="subtitle">🐕 Powered by Kiki Dog Robot MCP News Tool</div>
+
+    <div class="filter">
+      <button onclick="loadNews('technology')" data-category="technology">
+        🧠 Công nghệ
+      </button>
+      <button onclick="loadNews('entertainment')" data-category="entertainment">
+        🎬 Giải trí
+      </button>
+      <button onclick="loadNews('sports')" data-category="sports">
+        ⚽ Thể thao
+      </button>
+      <button onclick="loadNews('gold')" data-category="gold">
+        💰 Giá vàng
+      </button>
+    </div>
+
+    <div id="news" class="news"></div>
+    
+    <div class="attribution">
+      Powered by <a href="https://newsapi.org" target="_blank">NewsAPI.org</a> | 
+      MCP Tool: news.get_vietnam_news | 
+      ESP32-S3 Otto Robot
+    </div>
+  </div>
+
+  <script>
+    const apiKey = "87ad9881b871439c8c687d1fcb143eea";
+    const baseUrl = "https://newsapi.org/v2/top-headlines?country=vn";
+    let currentCategory = 'technology';
+
+    async function loadNews(category) {
+      currentCategory = category;
+      const container = document.getElementById("news");
+      
+      // Update active button
+      document.querySelectorAll('.filter button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.category === category) {
+          btn.classList.add('active');
+        }
+      });
+      
+      // Show loading
+      container.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <p>⏳ Đang tải tin tức ${getCategoryName(category)}...</p>
+        </div>
+      `;
+
+      let url;
+      if (category === "gold") {
+        // Use everything endpoint for gold price search
+        url = `https://newsapi.org/v2/everything?q=giá%20vàng%20Việt%20Nam&language=vi&pageSize=10&apiKey=${apiKey}`;
+      } else {
+        url = `${baseUrl}&category=${category}&pageSize=10&apiKey=${apiKey}`;
+      }
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        container.innerHTML = "";
+
+        if (data.status === 'ok' && data.articles && data.articles.length > 0) {
+          data.articles.forEach(article => {
+            if (!article.title || article.title === '[Removed]') return;
+            
+            const div = document.createElement("div");
+            div.className = "card";
+            
+            const publishDate = new Date(article.publishedAt).toLocaleDateString('vi-VN', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+            
+            div.innerHTML = `
+              ${article.urlToImage ? 
+                `<img class="card-image" src="${article.urlToImage}" alt="${article.title}" onerror="this.style.display='none'">` : 
+                `<div class="card-image" style="display:flex;align-items:center;justify-content:center;background:#667eea;color:white;font-size:3em;">📰</div>`
+              }
+              <div class="card-content">
+                <span class="source">${article.source.name || 'Unknown Source'}</span>
+                <h3>${article.title}</h3>
+                <p>${article.description || 'Không có mô tả'}</p>
+                <div class="card-footer">
+                  <a href="${article.url}" target="_blank">
+                    Đọc thêm →
+                  </a>
+                  <span class="date">${publishDate}</span>
+                </div>
+              </div>
+            `;
+            container.appendChild(div);
+          });
+        } else if (data.status === 'error') {
+          container.innerHTML = `
+            <div class="error">
+              <h3>❌ Lỗi API</h3>
+              <p>${data.message}</p>
+              <p>Code: ${data.code}</p>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div class="error">
+              <h3>📭 Không tìm thấy tin tức</h3>
+              <p>Không có tin tức nào cho chủ đề ${getCategoryName(category)}</p>
+            </div>
+          `;
+        }
+      } catch (err) {
+        container.innerHTML = `
+          <div class="error">
+            <h3>⚠️ Lỗi kết nối</h3>
+            <p>Không thể tải tin tức. Vui lòng kiểm tra kết nối mạng.</p>
+            <p>${err.message}</p>
+          </div>
+        `;
+        console.error('Error:', err);
+      }
+    }
+    
+    function getCategoryName(category) {
+      const names = {
+        'technology': 'Công nghệ',
+        'entertainment': 'Giải trí',
+        'sports': 'Thể thao',
+        'gold': 'Giá vàng'
+      };
+      return names[category] || category;
+    }
+
+    // Load default: Technology
+    loadNews('technology');
+    
+    // Refresh every 5 minutes
+    setInterval(() => {
+      loadNews(currentCategory);
+    }, 5 * 60 * 1000);
+  </script>
+</body>
+</html>

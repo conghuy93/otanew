@@ -9,6 +9,8 @@ set(PROJECT_VER "2.0.3")
 # Add this line to disable the specific warning
 add_compile_options(-Wno-missing-field-initializers)
 
+set(EXTRA_COMPONENT_DIRS components/music_module)
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(xiaozhi)
 

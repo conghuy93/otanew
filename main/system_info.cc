@@ -49,7 +49,9 @@ std::string SystemInfo::GetChipModelName() {
 
 std::string SystemInfo::GetUserAgent() {
     auto app_desc = esp_app_get_description();
-    auto user_agent = std::string(BOARD_NAME "/") + app_desc->version;
+    // Brand the startup/user-agent string with product name instead of board name
+    // Example: "miniZjp/2.0.3"
+    auto user_agent = std::string("miniZjp/") + app_desc->version;
     return user_agent;
 }
 

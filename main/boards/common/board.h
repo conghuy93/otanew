@@ -17,6 +17,7 @@
 void* create_board();
 class AudioCodec;
 class Display;
+class MusicPlayer;
 class Board {
 private:
     Board(const Board&) = delete; // 禁用拷贝构造函数
@@ -44,6 +45,7 @@ public:
     virtual bool GetTemperature(float& esp32temp);
     virtual Display* GetDisplay();
     virtual Camera* GetCamera();
+    virtual MusicPlayer* GetMusicPlayer() { return nullptr; }
     virtual NetworkInterface* GetNetwork() = 0;
     virtual void StartNetwork() = 0;
     virtual const char* GetNetworkStateIcon() = 0;

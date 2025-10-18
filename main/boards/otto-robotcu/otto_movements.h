@@ -74,7 +74,6 @@ public:
     void DogDance4Feet(int cycles = 6, int speed_delay = 300);
     void DogSwing(int cycles = 8, int speed_delay = 6);
     void DogStretch(int cycles = 2, int speed_delay = 15);
-    void DogScratch(int scratches = 5, int speed_delay = 50);  // New: Sit + BR leg scratch (gãi ngứa)
 
     //-- Legacy movement functions (adapted to work with 4 servos)
     void Jump(float steps = 1, int period = 2000);

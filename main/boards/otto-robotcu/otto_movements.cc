@@ -206,11 +206,10 @@ void Otto::DogWalk(int steps, int speed_delay) {
 
     for (int i = 0; i < steps; i++) {
         // Step 1: DogMaster sequence - LF+RB diagonal, then RF+LB
-        // Changed from 30°/150° to 35°/145° (reduced by 5° for gentler movement)
-        ServoAngleSet(SERVO_LF, 35, 0);
-        ServoAngleSet(SERVO_RB, 35, speed_delay);
-        ServoAngleSet(SERVO_RF, 145, 0);
-        ServoAngleSet(SERVO_LB, 145, speed_delay);
+        ServoAngleSet(SERVO_LF, 30, 0);
+        ServoAngleSet(SERVO_RB, 30, speed_delay);
+        ServoAngleSet(SERVO_RF, 150, 0);
+        ServoAngleSet(SERVO_LB, 150, speed_delay);
 
         // Return to neutral with same sequence
         ServoAngleSet(SERVO_LF, 90, 0);
@@ -219,10 +218,10 @@ void Otto::DogWalk(int steps, int speed_delay) {
         ServoAngleSet(SERVO_LB, 90, speed_delay);
 
         // Step 2: Opposite diagonal - RF+LB, then LF+RB  
-        ServoAngleSet(SERVO_RF, 35, 0);
-        ServoAngleSet(SERVO_LB, 35, speed_delay);
-        ServoAngleSet(SERVO_LF, 145, 0);
-        ServoAngleSet(SERVO_RB, 145, speed_delay);
+        ServoAngleSet(SERVO_RF, 30, 0);
+        ServoAngleSet(SERVO_LB, 30, speed_delay);
+        ServoAngleSet(SERVO_LF, 150, 0);
+        ServoAngleSet(SERVO_RB, 150, speed_delay);
 
         // Return to neutral
         ServoAngleSet(SERVO_RF, 90, 0);
@@ -244,11 +243,10 @@ void Otto::DogWalkBack(int steps, int speed_delay) {
 
     for (int i = 0; i < steps; i++) {
         // Step 1: DogMaster sequence - LF+RB diagonal (reversed angles)
-        // Changed from 30°/150° to 35°/145° (reduced by 5° for gentler movement)
-        ServoAngleSet(SERVO_LF, 145, 0);    // Reversed: from 35 → 145
-        ServoAngleSet(SERVO_RB, 145, speed_delay);
-        ServoAngleSet(SERVO_RF, 35, 0);     // Reversed: from 145 → 35
-        ServoAngleSet(SERVO_LB, 35, speed_delay);
+        ServoAngleSet(SERVO_LF, 150, 0);    // Reversed: from 30 → 150
+        ServoAngleSet(SERVO_RB, 150, speed_delay);
+        ServoAngleSet(SERVO_RF, 30, 0);     // Reversed: from 150 → 30
+        ServoAngleSet(SERVO_LB, 30, speed_delay);
 
         // Return to neutral with same sequence
         ServoAngleSet(SERVO_LF, 90, 0);
@@ -257,10 +255,10 @@ void Otto::DogWalkBack(int steps, int speed_delay) {
         ServoAngleSet(SERVO_LB, 90, speed_delay);
 
         // Step 2: Opposite diagonal - RF+LB (reversed angles)
-        ServoAngleSet(SERVO_RF, 145, 0);    // Reversed: from 35 → 145
-        ServoAngleSet(SERVO_LB, 145, speed_delay);
-        ServoAngleSet(SERVO_LF, 35, 0);     // Reversed: from 145 → 35
-        ServoAngleSet(SERVO_RB, 35, speed_delay);
+        ServoAngleSet(SERVO_RF, 150, 0);    // Reversed: from 30 → 150
+        ServoAngleSet(SERVO_LB, 150, speed_delay);
+        ServoAngleSet(SERVO_LF, 30, 0);     // Reversed: from 150 → 30
+        ServoAngleSet(SERVO_RB, 30, speed_delay);
 
         // Return to neutral
         ServoAngleSet(SERVO_RF, 90, 0);
@@ -400,22 +398,21 @@ void Otto::DogDance(int cycles, int speed_delay) {
     ESP_LOGI(TAG, "Dog dance completed");
 }
 
-//-- Dog Wave Right Foot (adapted from DogMaster Action_WaveRightFoot) - SITTING VERSION
+//-- Dog Wave Right Foot (adapted from DogMaster Action_WaveRightFoot)
 void Otto::DogWaveRightFoot(int waves, int speed_delay) {
-    ESP_LOGI(TAG, "Dog waving right front foot %d times (sitting)", waves);
+    ESP_LOGI(TAG, "Dog waving right front foot %d times", waves);
     
-    // Prepare sitting position: LF standing (90°), RF ready to wave (90°), back legs sitting (30°)
-    ExecuteDogMovement(90, 90, 30, 30, 300);
+    // Prepare position: other legs stable, right front starts at 90°
+    ExecuteDogMovement(90, 90, 90, 90, 300);
     
-    // Wave right front leg from 90° to 0° (slower: 16ms delay instead of 8ms)
-    // LF stays at 90° (standing), LB and RB stay at 30° (sitting)
+    // Wave right front leg from 90° to 0° rapidly
     for (int wave_count = 0; wave_count < waves; wave_count++) {
-        ESP_LOGI(TAG, "Wave %d (sitting)", wave_count + 1);
+        ESP_LOGI(TAG, "Wave %d", wave_count + 1);
         
         // Wave down from 90° to 0°
         for (int angle = 90; angle >= 0; angle -= 5) {
             ServoAngleSet(SERVO_RF, angle, 0);
-            vTaskDelay(pdMS_TO_TICKS(16));  // Slower: 16ms (was 8ms)
+            vTaskDelay(pdMS_TO_TICKS(8));
         }
         
         vTaskDelay(pdMS_TO_TICKS(speed_delay));
@@ -423,16 +420,16 @@ void Otto::DogWaveRightFoot(int waves, int speed_delay) {
         // Wave up from 0° to 90°
         for (int angle = 0; angle <= 90; angle += 5) {
             ServoAngleSet(SERVO_RF, angle, 0);
-            vTaskDelay(pdMS_TO_TICKS(16));  // Slower: 16ms (was 8ms)
+            vTaskDelay(pdMS_TO_TICKS(8));
         }
         
         vTaskDelay(pdMS_TO_TICKS(speed_delay));
     }
     
-    ESP_LOGI(TAG, "Right foot wave completed (sitting)");
+    ESP_LOGI(TAG, "Right foot wave completed");
     
-    // End with sitting position (already sitting, just ensure proper posture)
-    DogSitDown(300);
+    // End with standing
+    StandUp();
 }
 
 //-- Dog Dance 4 Feet (adapted from DogMaster Action_Dance4Feet)
@@ -520,39 +517,6 @@ void Otto::DogStretch(int cycles, int speed_delay) {
     }
     
     ESP_LOGI(TAG, "Dog stretch completed");
-}
-
-//-- Dog Scratch (gãi ngứa): Sit + BR leg wave continuously
-void Otto::DogScratch(int scratches, int speed_delay) {
-    ESP_LOGI(TAG, "Dog scratching %d times", scratches);
-    
-    // Sit down first
-    DogSitDown(500);
-    vTaskDelay(pdMS_TO_TICKS(300));
-    
-    // Wave back-right leg continuously while sitting
-    for (int scratch_count = 0; scratch_count < scratches; scratch_count++) {
-        ESP_LOGI(TAG, "Scratch %d", scratch_count + 1);
-        
-        // Scratch motion: RB from 30° down to 0° (then back up to 30°)
-        for (int angle = 30; angle >= 0; angle -= 10) {
-            ServoAngleSet(SERVO_RB, angle, 0);
-            vTaskDelay(pdMS_TO_TICKS(20));
-        }
-        
-        vTaskDelay(pdMS_TO_TICKS(speed_delay));
-        
-        for (int angle = 0; angle <= 30; angle += 10) {
-            ServoAngleSet(SERVO_RB, angle, 0);
-            vTaskDelay(pdMS_TO_TICKS(20));
-        }
-        
-        vTaskDelay(pdMS_TO_TICKS(speed_delay));
-    }
-    
-    ESP_LOGI(TAG, "Dog scratch completed");
-    
-    // Stay sitting (no auto stand-up)
 }
 
 ///////////////////////////////////////////////////////////////////

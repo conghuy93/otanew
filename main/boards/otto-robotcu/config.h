@@ -10,7 +10,7 @@
 // Dog-style servo pin mapping (4 servos) - Fixed for ESP32S3 compatibility
 #define DOG_LEFT_FRONT_PIN GPIO_NUM_17   // Left Front leg - Free GPIO
 #define DOG_RIGHT_FRONT_PIN GPIO_NUM_18   // Right Front leg - Free GPIO  
-#define DOG_LEFT_BACK_PIN GPIO_NUM_12     // Left Back leg - Changed from GPIO 39 (input-only)
+#define DOG_LEFT_BACK_PIN GPIO_NUM_8     // Left Back leg - Changed from GPIO 39 (input-only)
 #define DOG_RIGHT_BACK_PIN GPIO_NUM_38   // Right Back leg - OK for output
 
 // Legacy compatibility for existing code
@@ -19,6 +19,9 @@
 #define LEFT_FOOT_PIN DOG_LEFT_BACK_PIN
 #define RIGHT_FOOT_PIN DOG_RIGHT_BACK_PIN
 
+// Removed unused hand pins for dog-style robot
+// #define LEFT_HAND_PIN GPIO_NUM_8    // Not used in dog-style
+// #define RIGHT_HAND_PIN GPIO_NUM_12  // Not used in dog-style (conflicts with DISPLAY_CS_PIN)
 
 #define AUDIO_INPUT_SAMPLE_RATE 16000
 #define AUDIO_OUTPUT_SAMPLE_RATE 24000
@@ -36,7 +39,7 @@
 #define DISPLAY_CLK_PIN GPIO_NUM_9
 #define DISPLAY_DC_PIN GPIO_NUM_46
 #define DISPLAY_RST_PIN GPIO_NUM_11
-#define DISPLAY_CS_PIN GPIO_NUM_NC
+#define DISPLAY_CS_PIN GPIO_NUM_12
 
 #define LCD_TYPE_ST7789_SERIAL
 #define DISPLAY_WIDTH 240
@@ -52,10 +55,6 @@
 #define DISPLAY_SPI_MODE 3
 
 #define BOOT_BUTTON_GPIO GPIO_NUM_0
-
-// TTP223 touch sensor GPIO (active HIGH on touch)
-// Connect TTP223 OUT to this pin, VCC to 3.3V, GND to GND
-#define TOUCH_TTP223_GPIO GPIO_NUM_2
 
 #define OTTO_ROBOT_VERSION "1.4.4"
 

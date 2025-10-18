@@ -12,6 +12,7 @@
 #include "axp2101.h"
 #include "i2c_device.h"
 #include <wifi_station.h>
+#include "music_player.h"
 
 #include <esp_log.h>
 #include <esp_lcd_panel_vendor.h>
@@ -143,6 +144,125 @@ private:
     CustomBacklight* backlight_;
     esp_io_expander_handle_t io_expander = NULL;
     PowerSaveTimer* power_save_timer_;
+    MusicPlayer* music_player_;
+
+    void InitializeMusicPlayer() {
+        music_player_ = new MusicPlayer();
+        if (music_player_->init()) {
+            ESP_LOGI(TAG, "Music Player initialized with Music Tree support");
+            
+            // Add Vietnamese music tracks to the library
+            MusicTrack track1 = {
+                .title = "Lạc Trôi",
+                .artist = "Sơn Tùng",
+                .album = "Sơn Tùng Collection",
+                .file_path = "/spiffs/music/lac_troi.mp3",
+                .duration_ms = 240000,
+                .genre = "V-Pop"
+            };
+            
+            MusicTrack track2 = {
+                .title = "Hãy Trao Cho Anh",
+                .artist = "Sơn Tùng",
+                .album = "Sơn Tùng Collection",
+                .file_path = "/spiffs/music/hay_trao_cho_anh.mp3",
+                .duration_ms = 220000,
+                .genre = "V-Pop"
+            };
+            
+            MusicTrack track3 = {
+                .title = "Chúng Ta Của Hiện Tại",
+                .artist = "Sơn Tùng",
+                .album = "Sơn Tùng Collection", 
+                .file_path = "/spiffs/music/chung_ta_cua_hien_tai.mp3",
+                .duration_ms = 210000,
+                .genre = "V-Pop"
+            };
+            
+            MusicTrack track4 = {
+                .title = "Em Của Ngày Hôm Qua",
+                .artist = "Sơn Tùng",
+                .album = "Sơn Tùng Collection",
+                .file_path = "/spiffs/music/em_cua_ngay_hom_qua.mp3",
+                .duration_ms = 235000,
+                .genre = "V-Pop"
+            };
+            
+            MusicTrack track5 = {
+                .title = "Muộn Rồi Mà Sao Còn",
+                .artist = "Sơn Tùng",
+                .album = "Sơn Tùng Collection",
+                .file_path = "/spiffs/music/muon_roi_ma_sao_con.mp3",
+                .duration_ms = 205000,
+                .genre = "V-Pop"
+            };
+            
+            MusicTrack track6 = {
+                .title = "远方",
+                .artist = "Classical Artist",
+                .album = "远方专辑",
+                .file_path = "/spiffs/music/yuanfang.mp3", 
+                .duration_ms = 180000,
+                .genre = "Chinese"
+            };
+            
+            MusicTrack track7 = {
+                .title = "逐梦",
+                .artist = "EDM Producer", 
+                .album = "逐梦专辑",
+                .file_path = "/spiffs/music/zhumeng.mp3",
+                .duration_ms = 240000,
+                .genre = "Chinese"
+            };
+            
+            // Add tracks to library
+            music_player_->add_track(track1);  // Lạc Trôi
+            music_player_->add_track(track2);  // Hãy Trao Cho Anh
+            music_player_->add_track(track3);  // Chúng Ta Của Hiện Tại
+            music_player_->add_track(track4);  // Em Của Ngày Hôm Qua
+            music_player_->add_track(track5);  // Muộn Rồi Mà Sao Còn
+            music_player_->add_track(track6);  // 远方
+            music_player_->add_track(track7);  // 逐梦
+            
+            // Create playlists
+            music_player_->create_playlist("Sơn Tùng Hits");
+            music_player_->create_playlist("V-Pop Favorites");
+            music_player_->create_playlist("Chinese Songs");
+            music_player_->create_playlist("All Songs");
+            
+            // Add tracks to playlists
+            // Sơn Tùng playlist
+            music_player_->add_to_playlist("Sơn Tùng Hits", track1);
+            music_player_->add_to_playlist("Sơn Tùng Hits", track2);
+            music_player_->add_to_playlist("Sơn Tùng Hits", track3);
+            music_player_->add_to_playlist("Sơn Tùng Hits", track4);
+            music_player_->add_to_playlist("Sơn Tùng Hits", track5);
+            
+            // V-Pop playlist
+            music_player_->add_to_playlist("V-Pop Favorites", track1);
+            music_player_->add_to_playlist("V-Pop Favorites", track2);
+            music_player_->add_to_playlist("V-Pop Favorites", track3);
+            music_player_->add_to_playlist("V-Pop Favorites", track4);
+            music_player_->add_to_playlist("V-Pop Favorites", track5);
+            
+            // Chinese playlist
+            music_player_->add_to_playlist("Chinese Songs", track6);
+            music_player_->add_to_playlist("Chinese Songs", track7);
+            
+            // All songs
+            music_player_->add_to_playlist("All Songs", track1);
+            music_player_->add_to_playlist("All Songs", track2);
+            music_player_->add_to_playlist("All Songs", track3);
+            music_player_->add_to_playlist("All Songs", track4);
+            music_player_->add_to_playlist("All Songs", track5);
+            music_player_->add_to_playlist("All Songs", track6);
+            music_player_->add_to_playlist("All Songs", track7);
+            
+            ESP_LOGI(TAG, "Music library initialized with Vietnamese and Chinese content");
+        } else {
+            ESP_LOGE(TAG, "Failed to initialize Music Player");
+        }
+    }
 
     void InitializePowerSaveTimer() {
         power_save_timer_ = new PowerSaveTimer(-1, 60, 300);
@@ -288,11 +408,136 @@ private:
     // 初始化工具
     void InitializeTools() {
         auto &mcp_server = McpServer::GetInstance();
+        
+        // System tools
         mcp_server.AddTool("self.system.reconfigure_wifi",
             "Reboot the device and enter WiFi configuration mode.\n"
             "**CAUTION** You must ask the user to confirm this action.",
             PropertyList(), [this](const PropertyList& properties) {
                 ResetWifiConfiguration();
+                return true;
+            });
+
+        // Basic Music Controls
+        mcp_server.AddTool("self.music.play",
+            "Play a music file",
+            PropertyList(), [this](const PropertyList& properties) {
+                return music_player_->play("/spiffs/music/demo.mp3");
+            });
+
+        mcp_server.AddTool("self.music.stop", "Stop music playback",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->stop();
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.pause", "Pause music playback",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->pause();
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.resume", "Resume music playback",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->resume();
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.next", "Play next track in queue",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->next_track();
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.previous", "Play previous track in queue",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->previous_track();
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.is_playing", "Check if music is playing",
+            PropertyList(), [this](const PropertyList& properties) {
+                bool playing = music_player_->is_playing();
+                ESP_LOGI(TAG, "Music playing: %s", playing ? "yes" : "no");
+                return true;
+            });
+
+        // Playlist management
+        mcp_server.AddTool("self.music.list_playlists", "List all available playlists",
+            PropertyList(), [this](const PropertyList& properties) {
+                auto playlists = music_player_->get_playlists();
+                ESP_LOGI(TAG, "Available playlists (%d):", (int)playlists.size());
+                for (const auto& playlist : playlists) {
+                    ESP_LOGI(TAG, "  - %s", playlist.c_str());
+                }
+                return true;
+            });
+
+        // Library browsing
+        mcp_server.AddTool("self.music.list_artists", "List all artists in library",
+            PropertyList(), [this](const PropertyList& properties) {
+                auto artists = music_player_->get_artists();
+                ESP_LOGI(TAG, "Artists in library (%d):", (int)artists.size());
+                for (const auto& artist : artists) {
+                    ESP_LOGI(TAG, "  - %s", artist.c_str());
+                }
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.get_current_track", "Get information about currently playing track",
+            PropertyList(), [this](const PropertyList& properties) {
+                auto track = music_player_->get_current_track();
+                ESP_LOGI(TAG, "Current track: %s by %s from %s", 
+                        track.title.c_str(), track.artist.c_str(), track.album.c_str());
+                return true;
+            });
+
+        // Audio effects
+        mcp_server.AddTool("self.music.enable_shuffle", "Enable shuffle mode",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->shuffle(true);
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.disable_shuffle", "Disable shuffle mode",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->shuffle(false);
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.enable_repeat", "Enable repeat mode",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->repeat(true);
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.disable_repeat", "Disable repeat mode",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->repeat(false);
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.enable_reverb", "Enable reverb effect",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->enable_reverb(true);
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.disable_reverb", "Disable reverb effect",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->enable_reverb(false);
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.enable_echo", "Enable echo effect",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->enable_echo(true);
+                return true;
+            });
+
+        mcp_server.AddTool("self.music.disable_echo", "Disable echo effect",
+            PropertyList(), [this](const PropertyList& properties) {
+                music_player_->enable_echo(false);
                 return true;
             });
     }
@@ -307,7 +552,16 @@ public:
         InitializeSH8601Display();
         InitializeTouch();
         InitializeButtons();
+        InitializeMusicPlayer();
         InitializeTools();
+    }
+
+    virtual ~WaveshareEsp32s3TouchAMOLED1inch75() {
+        delete music_player_;
+    }
+
+    virtual MusicPlayer* GetMusicPlayer() override {
+        return music_player_;
     }
 
     virtual AudioCodec* GetAudioCodec() override {

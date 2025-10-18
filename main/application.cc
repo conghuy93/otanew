@@ -9,6 +9,10 @@
 #include "mcp_server.h"
 #include "assets.h"
 #include "settings.h"
+// For Otto GIF/text emoji mode toggling
+#include "boards/otto-robot/otto_emoji_display.h"
+// For Otto movement actions from voice
+#include "boards/otto-robot/otto_webserver.h"
 
 #include <cstring>
 #include <esp_log.h>
@@ -474,14 +478,135 @@ void Application::Start() {
             auto text = cJSON_GetObjectItem(root, "text");
             if (cJSON_IsString(text)) {
                 ESP_LOGI(TAG, ">> %s", text->valuestring);
+                
+                // Voice command: special action sequence
+                // Phrase example (Vietnamese): "lấy súng bắn nè bằng bằng"
+                // Behavior: walk back 1 step (speed 15), sit down, then lie down slowly; show shocked emoji
+                // Also accept unaccented form: "lay sung ban ne bang bang"
+                std::string phrase = text->valuestring;
+                auto to_lower = [](std::string s) {
+                    for (auto &ch : s) ch = (char)tolower((unsigned char)ch);
+                    return s;
+                };
+                auto contains = [](const std::string &hay, const char* needle) {
+                    return hay.find(needle) != std::string::npos;
+                };
+                std::string lower = to_lower(phrase);
+                
+                ESP_LOGI(TAG, "🎤 STT voice command check: original='%s' lower='%s'", phrase.c_str(), lower.c_str());
+
+                bool shoot_seq =
+                    // Full phrase (with and without accents)
+                    contains(lower, "lấy súng bắn nè bằng bằng") ||
+                    contains(lower, "lay sung ban ne bang bang") ||
+                    // Short variants requested
+                    contains(lower, "súng nè") ||
+                    contains(lower, "sung ne") ||
+                    contains(lower, "bằng bằng") ||
+                    contains(lower, "bang bang");
+                    
+                ESP_LOGI(TAG, "🎯 Shoot sequence match: %s", shoot_seq ? "YES ✅" : "NO ❌");
+                
+                if (shoot_seq) {
+                    ESP_LOGI(TAG, "🔫 EXECUTING shoot/defend sequence NOW! (No text display, only emoji)");
+                    // Lock emotion IMMEDIATELY before Schedule
+                    emotion_locked_ = true;
+                    ESP_LOGI(TAG, "🔒 Emotion LOCKED for keyword sequence");
+                    
+                    Schedule([this]() {
+                        auto disp = Board::GetInstance().GetDisplay();
+                        // Set shocked emotion/icon immediately (NO text message)
+                        disp->SetEmotion("shocked");
+
+                        // Queue movement sequence
+                        // 1) Walk back 1 step, speed delay 15 (smaller = faster per implementation)
+                        otto_controller_queue_action(ACTION_DOG_WALK_BACK, 1, 15, 0, 0);
+                        // 2) Sit down (3 seconds for complete motion)
+                        otto_controller_queue_action(ACTION_DOG_SIT_DOWN, 1, 3000, 0, 0);
+                        // 3) Lie down slowly
+                        otto_controller_queue_action(ACTION_DOG_LIE_DOWN, 1, 1500, 0, 0);
+                        // 4) After sequence, wait 3s then return home
+                        otto_controller_queue_action(ACTION_DELAY, 0, 3000, 0, 0);
+                        otto_controller_queue_action(ACTION_HOME, 1, 500, 0, 0);
+                        
+                        // Unlock emotion after sequence completes (total ~8s)
+                        // Schedule unlock after action queue finishes
+                        xTaskCreate([](void* arg) {
+                            vTaskDelay(pdMS_TO_TICKS(9000)); // Wait for sequence to complete
+                            Application* app = static_cast<Application*>(arg);
+                            app->Schedule([app]() {
+                                app->emotion_locked_ = false;
+                                ESP_LOGI("Application", "🔓 Emotion UNLOCKED after keyword sequence");
+                            });
+                            vTaskDelete(NULL);
+                        }, "emotion_unlock", 2048, this, 1, NULL);
+                    });
+                    ESP_LOGI(TAG, "✅ Shoot/defend sequence scheduled, returning now (no chat message)");
+                    return; // handled - skip SetChatMessage
+                }
+                
+                // Show user's recognized speech (only if NOT a keyword trigger)
                 Schedule([this, display, message = std::string(text->valuestring)]() {
                     display->SetChatMessage("user", message.c_str());
                 });
+
+                // Voice commands: Toggle between Otto GIF emoji mode and default text emoji mode
+                // Keywords (Vietnamese):
+                //   - "emoji chính"  => switch to Otto GIF mode (primary/animated)
+                //   - "emoji mặc định" => switch to default text mode
+                // Also accept unaccented forms: "emoji chinh", "emoji mac dinh"
+                // Note: helpers defined above
+
+                bool ask_otto = false;
+                bool ask_default = false;
+
+                // Exact keywords only
+                if (contains(lower, "emoji chính") || contains(lower, "emoji chinh")) {
+                    ask_otto = true;
+                }
+                if (contains(lower, "emoji mặc định") || contains(lower, "emoji mac dinh")) {
+                    ask_default = true;
+                }
+
+                if (ask_otto || ask_default) {
+                    Schedule([this, ask_otto, ask_default]() {
+                        auto disp = Board::GetInstance().GetDisplay();
+                        // Try OttoEmojiDisplay specific API when available
+                        if (auto otto = dynamic_cast<OttoEmojiDisplay*>(disp)) {
+                            if (ask_otto && !ask_default) {
+                                ESP_LOGI(TAG, "🎙 Voice cmd: switch to Otto GIF emoji mode");
+                                otto->SetEmojiMode(true);
+                                otto->SetEmotion("neutral");
+                                otto->ShowNotification("Chế độ emoji: Otto GIF", 2000);
+                            } else if (ask_default && !ask_otto) {
+                                ESP_LOGI(TAG, "🎙 Voice cmd: switch to Default text emoji mode");
+                                otto->SetEmojiMode(false);
+                                otto->SetEmotion("neutral");
+                                otto->ShowNotification("Chế độ emoji: Mặc định", 2000);
+                            } else {
+                                // If both detected, prefer explicit default unless phrase clearly says otto
+                                ESP_LOGI(TAG, "🎙 Voice cmd ambiguous; defaulting to text mode");
+                                otto->SetEmojiMode(false);
+                                otto->SetEmotion("neutral");
+                                otto->ShowNotification("Chế độ emoji: Mặc định", 2000);
+                            }
+                        } else {
+                            // Fallback: use base display only (no Otto-specific toggling)
+                            ESP_LOGW(TAG, "Voice emoji mode toggle requested but Otto display not available");
+                            disp->ShowNotification("Không hỗ trợ đổi emoji trên màn hình hiện tại", 2500);
+                        }
+                    });
+                }
             }
         } else if (strcmp(type->valuestring, "llm") == 0) {
             auto emotion = cJSON_GetObjectItem(root, "emotion");
             if (cJSON_IsString(emotion)) {
                 Schedule([this, display, emotion_str = std::string(emotion->valuestring)]() {
+                    // Skip emotion change if locked (keyword sequence in progress)
+                    if (emotion_locked_) {
+                        ESP_LOGW(TAG, "⛔ Ignoring LLM emotion '%s' (emotion locked for keyword)", emotion_str.c_str());
+                        return;
+                    }
                     display->SetEmotion(emotion_str.c_str());
                 });
             }
